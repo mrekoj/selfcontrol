@@ -158,3 +158,29 @@ extension SelfControlTests {
         XCTAssertEqual(decoded?.includeLinkedDomains, false)
     }
 }
+
+extension SelfControlTests {
+    func testHostFileBlockerRoundTrip() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let hostsPath = tempDir.appendingPathComponent("hosts").path
+
+        try "127.0.0.1\tlocalhost\n".write(toFile: hostsPath, atomically: true, encoding: .utf8)
+        let blocker = HostFileBlocker(path: hostsPath)
+
+        blocker.addSelfControlBlockHeader()
+        blocker.addRuleBlockingDomain("example.com")
+        blocker.addSelfControlBlockFooter()
+        XCTAssertTrue(blocker.writeNewFileContents())
+
+        blocker.revertFileContentsToDisk()
+        XCTAssertTrue(HostFileBlocker.blockFoundInHostsFile(path: hostsPath))
+
+        blocker.removeSelfControlBlock()
+        XCTAssertTrue(blocker.writeNewFileContents())
+
+        let finalContents = try String(contentsOfFile: hostsPath, encoding: .utf8)
+        XCTAssertFalse(finalContents.contains(HostFileBlocker.header))
+        XCTAssertFalse(finalContents.contains("example.com"))
+    }
+}
