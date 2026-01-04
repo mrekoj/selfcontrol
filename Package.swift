@@ -23,7 +23,7 @@ let package = Package(
             name: "SelfControlApp",
             dependencies: ["SelfControlCore"],
             resources: [
-                .copy("Resources/LaunchDaemons")
+                .copy("Resources")
             ]
         ),
         .executableTarget(

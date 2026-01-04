@@ -26,6 +26,20 @@ Targets:
 - `selfcontrol-cli` (CLI - stub in Phase 1)
 - `SelfControlTests`
 
+## Packaging (App Bundle)
+
+Create an `.app` bundle that places the LaunchDaemon plist at `Contents/Library/LaunchDaemons`:
+
+```sh
+scripts/package_app.sh
+```
+
+Optional signing:
+
+```sh
+SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" scripts/package_app.sh
+```
+
 ## License
 
 SelfControl is free software under the GPL. See `COPYING` for details.

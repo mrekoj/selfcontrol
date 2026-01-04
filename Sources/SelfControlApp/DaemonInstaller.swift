@@ -38,7 +38,7 @@ final class DaemonInstaller: ObservableObject {
                                                 withExtension: "plist",
                                                 subdirectory: "LaunchDaemons") else {
             throw NSError(domain: "com.skynet.selfcontrol", code: 900, userInfo: [
-                NSLocalizedDescriptionKey: "LaunchDaemon plist not found in app resources."
+                NSLocalizedDescriptionKey: "LaunchDaemon plist not found in app resources. Run scripts/package_app.sh to build a proper app bundle."
             ])
         }
 
@@ -47,7 +47,7 @@ final class DaemonInstaller: ObservableObject {
             try fileManager.copyItem(at: resourceURL, to: targetURL)
         } catch {
             throw NSError(domain: "com.skynet.selfcontrol", code: 901, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to place LaunchDaemon plist in app bundle: \(error.localizedDescription)"
+                NSLocalizedDescriptionKey: "Failed to place LaunchDaemon plist in app bundle: \(error.localizedDescription). Run scripts/package_app.sh before signing."
             ])
         }
     }
