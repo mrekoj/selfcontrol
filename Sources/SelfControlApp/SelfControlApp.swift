@@ -22,6 +22,7 @@ struct ContentView: View {
             daemonSection
             blockSection
             controlsSection
+            EmergencyUnlockView(model: model)
             statusSection
         }
         .padding(24)

@@ -4,12 +4,16 @@ import SelfControlCore
 final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
     private let listener: NSXPCListener
     private let settingsStore: SettingsStore
+    private let unlockStore: EmergencyUnlockStore
+    private let unlockPolicy = EmergencyUnlockPolicy()
 
     init(machServiceName: String = DaemonConstants.machServiceName) {
         self.listener = NSXPCListener(machServiceName: machServiceName)
         let serial = SystemInfo.serialNumber() ?? "UNKNOWN"
         let settingsURL = SettingsPaths.defaultURL(serialNumber: serial)
         self.settingsStore = SettingsStore(url: settingsURL)
+        let unlockURL = URL(fileURLWithPath: "/usr/local/etc").appendingPathComponent(".selfcontrol-unlock-history.json")
+        self.unlockStore = EmergencyUnlockStore(url: unlockURL)
         super.init()
         listener.delegate = self
     }
@@ -121,6 +125,39 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
 
             current.blockEndDate = newEndDate
             try settingsStore.save(current)
+            reply(nil)
+        } catch {
+            reply(error as NSError)
+        }
+    }
+
+    func clearBlock(reason: String?, authorization: Data?, withReply reply: @escaping (NSError?) -> Void) {
+        do {
+            var current = try settingsStore.load()
+            if !BlockState.isRunning(settings: current) {
+                reply(SelfControlError.make(.blockNotRunning, description: "Block not running"))
+                return
+            }
+
+            let history = unlockStore.load()
+            if !unlockPolicy.canUnlock(history: history) {
+                reply(SelfControlError.make(.unlockRateLimited, description: "Emergency unlock is rate-limited"))
+                return
+            }
+
+            let manager = BlockManager(isAllowlist: current.activeBlockAsWhitelist,
+                                       allowLocal: current.allowLocalNetworks,
+                                       includeCommonSubdomains: current.evaluateCommonSubdomains,
+                                       includeLinkedDomains: current.includeLinkedDomains)
+            let cleared = manager.clearBlock()
+
+            current.blockIsRunning = false
+            current.blockEndDate = Date.distantPast
+            current.activeBlocklist = []
+            try settingsStore.save(current)
+
+            EmergencyUnlockLogger.log(reason: reason, cleared: cleared)
+            unlockStore.append(EmergencyUnlockRecord(date: Date(), reason: reason))
             reply(nil)
         } catch {
             reply(error as NSError)

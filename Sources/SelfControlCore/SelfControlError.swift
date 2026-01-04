@@ -8,6 +8,7 @@ public enum SelfControlErrorCode: Int {
     case updateNotAllowedForAllowlist = 305
     case endDateEarlierThanCurrent = 308
     case endDateTooFarInFuture = 309
+    case unlockRateLimited = 401
 }
 
 public enum SelfControlError {

@@ -15,6 +15,8 @@ struct SelfControlCLI {
             print(SelfControlVersion.current)
         case "status":
             runStatus()
+        case "unlock":
+            runUnlock(args: Array(args.dropFirst()))
         case "start":
             runStart(args: Array(args.dropFirst()))
         default:
@@ -100,6 +102,38 @@ struct SelfControlCLI {
         _ = sema.wait(timeout: .now() + 30)
     }
 
+    private static func runUnlock(args: [String]) {
+        var reason = ""
+        if let idx = args.firstIndex(of: "--reason"), idx + 1 < args.count {
+            reason = args[idx + 1]
+        }
+        let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            fputs("Unlock requires --reason\n", stderr)
+            exit(1)
+        }
+
+        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
+            fputs("Daemon connection failed: \(error)\n", stderr)
+        } as? DaemonXPCProtocol
+
+        guard let remote = proxy else {
+            fputs("Unable to connect to daemon. Is selfcontrold installed and running?\n", stderr)
+            exit(1)
+        }
+
+        let sema = DispatchSemaphore(value: 0)
+        remote.clearBlock(reason: trimmed, authorization: nil) { error in
+            if let error {
+                fputs("Unlock failed: \(error.localizedDescription)\n", stderr)
+            } else {
+                print("Block cleared")
+            }
+            sema.signal()
+        }
+        _ = sema.wait(timeout: .now() + 30)
+    }
+
     private static func printUsage() {
         print("""
 selfcontrol-cli
@@ -108,6 +142,7 @@ Commands:
   version
   status
   start --minutes <N> [--allowlist] (--block <host> | --blocklist <a,b,c>)
+  unlock --reason <text>
 """)
     }
 }

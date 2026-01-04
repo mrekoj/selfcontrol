@@ -26,6 +26,10 @@ public enum DaemonConstants {
                             authorization: Data?,
                             withReply reply: @escaping (NSError?) -> Void)
 
+    func clearBlock(reason: String?,
+                    authorization: Data?,
+                    withReply reply: @escaping (NSError?) -> Void)
+
     func getVersion(withReply reply: @escaping (String) -> Void)
 }
 

@@ -184,3 +184,17 @@ extension SelfControlTests {
         XCTAssertFalse(finalContents.contains("example.com"))
     }
 }
+
+extension SelfControlTests {
+    func testEmergencyUnlockPolicy() {
+        let policy = EmergencyUnlockPolicy(cooldownMinutes: 15, maxPerDay: 1)
+        let now = Date()
+        XCTAssertTrue(policy.canUnlock(history: [], now: now))
+
+        let recent = [EmergencyUnlockRecord(date: now.addingTimeInterval(-60), reason: "test")]
+        XCTAssertFalse(policy.canUnlock(history: recent, now: now))
+
+        let old = [EmergencyUnlockRecord(date: now.addingTimeInterval(-3600), reason: "test")]
+        XCTAssertFalse(policy.canUnlock(history: old, now: now))
+    }
+}

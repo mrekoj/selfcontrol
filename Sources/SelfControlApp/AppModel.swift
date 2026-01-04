@@ -12,6 +12,7 @@ final class AppModel: ObservableObject {
     @Published var daemonVersion: String = "unknown"
     @Published var blockStatusText: String = "unknown"
     @Published var errorMessage: String?
+    @Published var lastUnlockStatus: String = ""
 
     @Published var evaluateCommonSubdomains: Bool = true
     @Published var includeLinkedDomains: Bool = true
@@ -88,6 +89,28 @@ final class AppModel: ObservableObject {
                 self.errorMessage = error.localizedDescription
             } else {
                 self.errorMessage = nil
+                self.refreshBlockStatus()
+            }
+        }
+    }
+
+    func clearBlock(reason: String) {
+        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
+            self.errorMessage = error.localizedDescription
+        } as? DaemonXPCProtocol
+
+        guard let remote = proxy else {
+            errorMessage = "Unable to connect to daemon. Is it installed and approved?"
+            return
+        }
+
+        remote.clearBlock(reason: reason, authorization: nil) { error in
+            if let error {
+                self.errorMessage = error.localizedDescription
+                self.lastUnlockStatus = "failed"
+            } else {
+                self.errorMessage = nil
+                self.lastUnlockStatus = "cleared"
                 self.refreshBlockStatus()
             }
         }

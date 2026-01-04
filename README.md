@@ -22,9 +22,19 @@ swift build
 Targets:
 
 - `SelfControlApp` (SwiftUI app)
-- `selfcontrold` (privileged daemon - stub in Phase 1)
-- `selfcontrol-cli` (CLI - stub in Phase 1)
+- `selfcontrold` (privileged daemon)
+- `selfcontrol-cli` (CLI)
 - `SelfControlTests`
+
+## Emergency Unlock
+
+Phase 5 replaces the old “Killer” app with a guarded emergency unlock flow. It is rate-limited and requires a reason.
+
+CLI example:
+
+```sh
+./build/SelfControl.app/Contents/MacOS/selfcontrol-cli unlock --reason "accidentally blocked work site"
+```
 
 ## Packaging (App Bundle)
 
