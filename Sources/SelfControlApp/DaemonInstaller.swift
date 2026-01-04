@@ -5,6 +5,7 @@ import SelfControlCore
 @MainActor
 final class DaemonInstaller: ObservableObject {
     @Published private(set) var state: SMAppService.Status = .notRegistered
+    private let fileManager = FileManager.default
 
     init() {
         refreshStatus()
@@ -16,6 +17,7 @@ final class DaemonInstaller: ObservableObject {
     }
 
     func register() throws {
+        try ensureDaemonPlistPresent()
         let service = SMAppService.daemon(plistName: "\(BundleIdentifiers.daemon).plist")
         try service.register()
         refreshStatus()
@@ -25,5 +27,28 @@ final class DaemonInstaller: ObservableObject {
         let service = SMAppService.daemon(plistName: "\(BundleIdentifiers.daemon).plist")
         try service.unregister()
         refreshStatus()
+    }
+
+    private func ensureDaemonPlistPresent() throws {
+        let targetDir = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchDaemons", isDirectory: true)
+        let targetURL = targetDir.appendingPathComponent("\(BundleIdentifiers.daemon).plist")
+        if fileManager.fileExists(atPath: targetURL.path) { return }
+
+        guard let resourceURL = Bundle.main.url(forResource: BundleIdentifiers.daemon,
+                                                withExtension: "plist",
+                                                subdirectory: "LaunchDaemons") else {
+            throw NSError(domain: "com.skynet.selfcontrol", code: 900, userInfo: [
+                NSLocalizedDescriptionKey: "LaunchDaemon plist not found in app resources."
+            ])
+        }
+
+        do {
+            try fileManager.createDirectory(at: targetDir, withIntermediateDirectories: true)
+            try fileManager.copyItem(at: resourceURL, to: targetURL)
+        } catch {
+            throw NSError(domain: "com.skynet.selfcontrol", code: 901, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to place LaunchDaemon plist in app bundle: \(error.localizedDescription)"
+            ])
+        }
     }
 }

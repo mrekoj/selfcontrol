@@ -4,57 +4,112 @@ import SelfControlCore
 
 @main
 struct SelfControlApp: App {
-    @StateObject private var installer = DaemonInstaller()
+    @StateObject private var model = AppModel()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(installer: installer)
+            ContentView(model: model)
         }
     }
 }
 
 struct ContentView: View {
-    @ObservedObject var installer: DaemonInstaller
-    @State private var daemonVersion: String = "unknown"
-    @State private var errorMessage: String?
+    @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
+            headerSection
+            daemonSection
+            blockSection
+            controlsSection
+            statusSection
+        }
+        .padding(24)
+        .frame(minWidth: 520)
+        .onAppear { model.refresh() }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
             Text("SelfControl")
                 .font(.largeTitle)
-            Text("SwiftUI rewrite scaffold")
+            Text("SwiftUI rewrite (macOS 13+, Apple silicon)")
                 .foregroundStyle(.secondary)
-            Text("Version \(SelfControlVersion.current)")
+            Text("App version \(SelfControlVersion.current)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
 
-            Divider().padding(.vertical, 8)
-
-            Text("Daemon status: \(statusText(installer.state))")
-            Text("Daemon version: \(daemonVersion)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-                Button("Install Daemon") {
-                    runInstall()
-                }
-                Button("Uninstall Daemon") {
-                    runUninstall()
-                }
-                Button("Check Version") {
-                    fetchDaemonVersion()
+    private var daemonSection: some View {
+        GroupBox("Daemon") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Status: \(statusText(model.daemonStatus))")
+                Text("Version: \(model.daemonVersion)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    Button("Install") { model.installDaemon() }
+                    Button("Uninstall") { model.uninstallDaemon() }
+                    Button("Refresh") { model.refresh() }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
 
-            if let errorMessage {
-                Text(errorMessage)
+    private var blockSection: some View {
+        GroupBox("Block settings") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Minutes")
+                    TextField("60", value: $model.minutes, formatter: NumberFormatter())
+                        .frame(width: 80)
+                    Toggle("Allowlist", isOn: $model.allowlist)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Blocklist (one per line)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $model.blocklistText)
+                        .frame(minHeight: 120)
+                        .border(Color.gray.opacity(0.3))
+                }
+
+                HStack(spacing: 16) {
+                    Toggle("Common subdomains", isOn: $model.evaluateCommonSubdomains)
+                    Toggle("Linked domains", isOn: $model.includeLinkedDomains)
+                }
+
+                HStack(spacing: 16) {
+                    Toggle("Allow local networks", isOn: $model.allowLocalNetworks)
+                    Toggle("Clear caches", isOn: $model.clearCaches)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var controlsSection: some View {
+        HStack {
+            Button("Start Block") { model.startBlock() }
+                .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var statusSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Block status: \(model.blockStatusText)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let message = model.errorMessage {
+                Text(message)
                     .foregroundStyle(.red)
                     .font(.caption)
             }
         }
-        .padding(32)
-        .frame(minWidth: 420)
     }
 
     private func statusText(_ status: SMAppService.Status) -> String {
@@ -64,35 +119,6 @@ struct ContentView: View {
         case .requiresApproval: return "requires approval"
         case .notFound: return "not found"
         @unknown default: return "unknown"
-        }
-    }
-
-    private func runInstall() {
-        do {
-            try installer.register()
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func runUninstall() {
-        do {
-            try installer.unregister()
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func fetchDaemonVersion() {
-        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            errorMessage = error.localizedDescription
-        } as? DaemonXPCProtocol
-
-        proxy?.getVersion { version in
-            daemonVersion = version
-            errorMessage = nil
         }
     }
 }
