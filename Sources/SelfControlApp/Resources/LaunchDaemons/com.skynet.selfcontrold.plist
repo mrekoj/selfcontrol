@@ -2,12 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key>
-    <string>com.skynet.selfcontrold</string>
-    <key>MachServices</key>
-    <dict>
-        <key>com.skynet.selfcontrold</key>
-        <true/>
+	<key>Label</key>
+	<string>com.skynet.selfcontrold</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>Contents/Resources/com.skynet.selfcontrold</string>
+	</array>
+	<key>MachServices</key>
+	<dict>
+		<key>com.skynet.selfcontrold</key>
+		<true/>
     </dict>
     <key>RunAtLoad</key>
     <true/>

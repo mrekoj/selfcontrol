@@ -13,7 +13,7 @@ let package = Package(
         .executable(name: "selfcontrol-cli", targets: ["SelfControlCLI"])
     ],
     dependencies: [
-        // Add dependencies later (Sparkle 2, Sentry, etc.)
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.0.0")
     ],
     targets: [
         .target(
@@ -21,7 +21,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "SelfControlApp",
-            dependencies: ["SelfControlCore"],
+            dependencies: [
+                "SelfControlCore",
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             resources: [
                 .copy("Resources")
             ]

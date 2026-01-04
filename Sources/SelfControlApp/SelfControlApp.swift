@@ -5,16 +5,18 @@ import SelfControlCore
 @main
 struct SelfControlApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var updater = UpdaterController()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(model: model)
+            ContentView(model: model, updater: updater)
         }
     }
 }
 
 struct ContentView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var updater: UpdaterController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -105,6 +107,7 @@ struct ContentView: View {
                 TextField("15", value: $model.extendMinutes, formatter: NumberFormatter())
                     .frame(width: 80)
                 Button("Extend") { model.extendBlock() }
+                Button("Check for Updates") { updater.checkForUpdates() }
             }
         }
     }

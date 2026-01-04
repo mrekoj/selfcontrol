@@ -38,6 +38,15 @@ CLI example:
 ./build/SelfControl.app/Contents/MacOS/selfcontrol-cli extend --minutes 30
 ```
 
+## Sparkle 2 (Updater)
+
+Sparkle is wired via Swift Package Manager. You must update these keys in `Sources/SelfControlApp/Resources/AppInfo.plist`:
+
+- `SUFeedURL` (your appcast URL)
+- `SUPublicEDKey` (your Ed25519 public key)
+
+Generate keys with Sparkle’s `generate_keys` tool, and use the public key in `SUPublicEDKey`.
+
 ## Packaging (App Bundle)
 
 Create an `.app` bundle that places the LaunchDaemon plist at `Contents/Library/LaunchDaemons`:
