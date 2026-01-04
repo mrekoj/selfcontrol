@@ -36,6 +36,7 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
 
     func startBlock(blocklist: [String], isAllowlist: Bool, endDate: Date, settings: BlockSettings, authorization: Data?, withReply reply: @escaping (NSError?) -> Void) {
         do {
+            try AuthorizationManager.verifyAuthorization(authorization, command: .startBlock)
             var current = try settingsStore.load()
             if BlockState.isRunning(settings: current) {
                 reply(SelfControlError.make(.blockAlreadyRunning, description: "Block already running"))
@@ -75,6 +76,7 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
 
     func updateBlocklist(_ newBlocklist: [String], authorization: Data?, withReply reply: @escaping (NSError?) -> Void) {
         do {
+            try AuthorizationManager.verifyAuthorization(authorization, command: .updateBlocklist)
             var current = try settingsStore.load()
             if !BlockState.isRunning(settings: current) {
                 reply(SelfControlError.make(.blockNotRunning, description: "Block not running"))
@@ -107,6 +109,7 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
 
     func updateBlockEndDate(_ newEndDate: Date, authorization: Data?, withReply reply: @escaping (NSError?) -> Void) {
         do {
+            try AuthorizationManager.verifyAuthorization(authorization, command: .updateBlockEndDate)
             var current = try settingsStore.load()
             if !BlockState.isRunning(settings: current) {
                 reply(SelfControlError.make(.blockNotRunning, description: "Block not running"))
@@ -133,6 +136,7 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
 
     func clearBlock(reason: String?, authorization: Data?, withReply reply: @escaping (NSError?) -> Void) {
         do {
+            try AuthorizationManager.verifyAuthorization(authorization, command: .clearBlock)
             var current = try settingsStore.load()
             if !BlockState.isRunning(settings: current) {
                 reply(SelfControlError.make(.blockNotRunning, description: "Block not running"))

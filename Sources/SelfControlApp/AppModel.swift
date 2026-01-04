@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     @Published var includeLinkedDomains: Bool = true
     @Published var allowLocalNetworks: Bool = true
     @Published var clearCaches: Bool = true
+    private var authCache: [AuthCommand: Data] = [:]
 
     private let installer = DaemonInstaller()
 
@@ -75,6 +76,7 @@ final class AppModel: ObservableObject {
             enableErrorReporting: false
         )
 
+        guard let authData = authorizationData(for: .startBlock) else { return }
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
             self.errorMessage = error.localizedDescription
         } as? DaemonXPCProtocol
@@ -84,7 +86,7 @@ final class AppModel: ObservableObject {
             return
         }
 
-        remote.startBlock(blocklist: cleaned, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: nil) { error in
+        remote.startBlock(blocklist: cleaned, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: authData) { error in
             if let error {
                 self.errorMessage = error.localizedDescription
             } else {
@@ -95,6 +97,7 @@ final class AppModel: ObservableObject {
     }
 
     func clearBlock(reason: String) {
+        guard let authData = authorizationData(for: .clearBlock) else { return }
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
             self.errorMessage = error.localizedDescription
         } as? DaemonXPCProtocol
@@ -104,7 +107,7 @@ final class AppModel: ObservableObject {
             return
         }
 
-        remote.clearBlock(reason: reason, authorization: nil) { error in
+        remote.clearBlock(reason: reason, authorization: authData) { error in
             if let error {
                 self.errorMessage = error.localizedDescription
                 self.lastUnlockStatus = "failed"
@@ -113,6 +116,20 @@ final class AppModel: ObservableObject {
                 self.lastUnlockStatus = "cleared"
                 self.refreshBlockStatus()
             }
+        }
+    }
+
+    private func authorizationData(for command: AuthCommand) -> Data? {
+        if let cached = authCache[command] {
+            return cached
+        }
+        do {
+            let data = try AuthorizationManager.authorizationData(for: command)
+            authCache[command] = data
+            return data
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
         }
     }
 

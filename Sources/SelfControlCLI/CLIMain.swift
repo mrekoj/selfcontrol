@@ -78,6 +78,7 @@ struct SelfControlCLI {
 
         let endDate = Date().addingTimeInterval(TimeInterval(mins * 60))
         let settings = BlockSettings(from: Settings.defaults)
+        guard let authData = authorizationData(for: .startBlock) else { return }
 
         let connection = DaemonClient.shared.connect()
         let proxy = connection.remoteObjectProxyWithErrorHandler { error in
@@ -90,7 +91,7 @@ struct SelfControlCLI {
         }
 
         let sema = DispatchSemaphore(value: 0)
-        remote.startBlock(blocklist: blocklist, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: nil) { error in
+        remote.startBlock(blocklist: blocklist, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: authData) { error in
             if let error {
                 fputs("Start failed: \(error.localizedDescription)\n", stderr)
             } else {
@@ -123,7 +124,8 @@ struct SelfControlCLI {
         }
 
         let sema = DispatchSemaphore(value: 0)
-        remote.clearBlock(reason: trimmed, authorization: nil) { error in
+        guard let authData = authorizationData(for: .clearBlock) else { return }
+        remote.clearBlock(reason: trimmed, authorization: authData) { error in
             if let error {
                 fputs("Unlock failed: \(error.localizedDescription)\n", stderr)
             } else {
@@ -132,6 +134,15 @@ struct SelfControlCLI {
             sema.signal()
         }
         _ = sema.wait(timeout: .now() + 30)
+    }
+
+    private static func authorizationData(for command: AuthCommand) -> Data? {
+        do {
+            return try AuthorizationManager.authorizationData(for: command)
+        } catch {
+            fputs("Authorization failed: \(error.localizedDescription)\n", stderr)
+            return nil
+        }
     }
 
     private static func printUsage() {
