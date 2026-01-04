@@ -7,6 +7,7 @@ final class AppModel: ObservableObject {
     @Published var minutes: Int = 60
     @Published var allowlist: Bool = false
     @Published var blocklistText: String = ""
+    @Published var extendMinutes: Int = 15
 
     @Published var daemonStatus: SMAppService.Status = .notRegistered
     @Published var daemonVersion: String = "unknown"
@@ -87,6 +88,70 @@ final class AppModel: ObservableObject {
         }
 
         remote.startBlock(blocklist: cleaned, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: authData) { error in
+            if let error {
+                self.errorMessage = error.localizedDescription
+            } else {
+                self.errorMessage = nil
+                self.refreshBlockStatus()
+            }
+        }
+    }
+
+    func updateBlocklist() {
+        let rawLines = blocklistText.components(separatedBy: .newlines)
+        var cleaned: [String] = []
+        for line in rawLines {
+            cleaned.append(contentsOf: BlocklistCleaner.cleanEntry(line))
+        }
+
+        guard !cleaned.isEmpty || allowlist else {
+            errorMessage = "Blocklist cannot be empty unless allowlist is enabled."
+            return
+        }
+
+        guard let authData = authorizationData(for: .updateBlocklist) else { return }
+        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
+            self.errorMessage = error.localizedDescription
+        } as? DaemonXPCProtocol
+
+        guard let remote = proxy else {
+            errorMessage = "Unable to connect to daemon. Is it installed and approved?"
+            return
+        }
+
+        remote.updateBlocklist(cleaned, authorization: authData) { error in
+            if let error {
+                self.errorMessage = error.localizedDescription
+            } else {
+                self.errorMessage = nil
+                self.refreshBlockStatus()
+            }
+        }
+    }
+
+    func extendBlock() {
+        guard extendMinutes > 0 else {
+            errorMessage = "Extend minutes must be greater than 0."
+            return
+        }
+        guard let authData = authorizationData(for: .updateBlockEndDate) else { return }
+
+        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
+            self.errorMessage = error.localizedDescription
+        } as? DaemonXPCProtocol
+
+        guard let remote = proxy else {
+            errorMessage = "Unable to connect to daemon. Is it installed and approved?"
+            return
+        }
+
+        let serial = SystemInfo.serialNumber() ?? "UNKNOWN"
+        let url = SettingsPaths.defaultURL(serialNumber: serial)
+        let store = SettingsStore(url: url)
+        let currentSettings = (try? store.load()) ?? Settings.defaults
+        let baseDate = max(currentSettings.blockEndDate, Date())
+        let newEndDate = baseDate.addingTimeInterval(TimeInterval(extendMinutes * 60))
+        remote.updateBlockEndDate(newEndDate, authorization: authData) { error in
             if let error {
                 self.errorMessage = error.localizedDescription
             } else {

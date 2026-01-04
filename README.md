@@ -34,6 +34,8 @@ CLI example:
 
 ```sh
 ./build/SelfControl.app/Contents/MacOS/selfcontrol-cli unlock --reason "accidentally blocked work site"
+./build/SelfControl.app/Contents/MacOS/selfcontrol-cli update --blocklist "example.com,news.com"
+./build/SelfControl.app/Contents/MacOS/selfcontrol-cli extend --minutes 30
 ```
 
 ## Packaging (App Bundle)

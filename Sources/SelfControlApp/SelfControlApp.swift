@@ -93,9 +93,19 @@ struct ContentView: View {
     }
 
     private var controlsSection: some View {
-        HStack {
-            Button("Start Block") { model.startBlock() }
-                .buttonStyle(.borderedProminent)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Button("Start Block") { model.startBlock() }
+                    .buttonStyle(.borderedProminent)
+                Button("Update Blocklist") { model.updateBlocklist() }
+            }
+
+            HStack(spacing: 8) {
+                Text("Extend by minutes")
+                TextField("15", value: $model.extendMinutes, formatter: NumberFormatter())
+                    .frame(width: 80)
+                Button("Extend") { model.extendBlock() }
+            }
         }
     }
 
