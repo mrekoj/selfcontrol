@@ -139,3 +139,22 @@ extension SelfControlTests {
         XCTAssertTrue(config.contains("pass out proto tcp from any to any port 53"))
     }
 }
+
+extension SelfControlTests {
+    func testBlockSettingsCoding() throws {
+        let settings = BlockSettings(
+            evaluateCommonSubdomains: true,
+            includeLinkedDomains: false,
+            blockSoundShouldPlay: true,
+            blockSound: 3,
+            clearCaches: true,
+            allowLocalNetworks: false,
+            enableErrorReporting: false
+        )
+        let data = try NSKeyedArchiver.archivedData(withRootObject: settings, requiringSecureCoding: true)
+        let decoded = try NSKeyedUnarchiver.unarchivedObject(ofClass: BlockSettings.self, from: data)
+        XCTAssertEqual(decoded?.blockSound, 3)
+        XCTAssertEqual(decoded?.evaluateCommonSubdomains, true)
+        XCTAssertEqual(decoded?.includeLinkedDomains, false)
+    }
+}
