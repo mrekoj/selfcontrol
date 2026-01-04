@@ -13,12 +13,32 @@ struct SelfControlCLI {
         switch command {
         case "version":
             print(SelfControlVersion.current)
+        case "status":
+            runStatus()
         case "start":
             runStart(args: Array(args.dropFirst()))
         default:
             printUsage()
             exit(1)
         }
+    }
+
+    private static func runStatus() {
+        let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
+            fputs("Daemon connection failed: \(error)\n", stderr)
+        } as? DaemonXPCProtocol
+
+        guard let remote = proxy else {
+            fputs("Unable to connect to daemon. Is selfcontrold installed and running?\n", stderr)
+            exit(1)
+        }
+
+        let sema = DispatchSemaphore(value: 0)
+        remote.getVersion { version in
+            print("daemon version: \(version)")
+            sema.signal()
+        }
+        _ = sema.wait(timeout: .now() + 5)
     }
 
     private static func runStart(args: [String]) {
@@ -86,6 +106,7 @@ selfcontrol-cli
 
 Commands:
   version
+  status
   start --minutes <N> [--allowlist] (--block <host> | --blocklist <a,b,c>)
 """)
     }
