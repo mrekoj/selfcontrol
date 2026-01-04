@@ -62,7 +62,12 @@ public final class SettingsStore {
             return Settings.defaults
         }
         let data = try Data(contentsOf: url)
-        return try decoder.decode(Settings.self, from: data)
+        do {
+            return try decoder.decode(Settings.self, from: data)
+        } catch {
+            // If the file is from an older schema or is incomplete, fall back to defaults.
+            return Settings.defaults
+        }
     }
 
     public func save(_ settings: Settings, date: Date = Date()) throws {

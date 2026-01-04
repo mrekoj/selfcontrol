@@ -23,13 +23,13 @@ public enum AuthCommand: CaseIterable, Hashable {
     public var promptDescription: String {
         switch self {
         case .startBlock:
-            return "Start a SelfControl block"
+            return "Start a SkyControl block"
         case .updateBlocklist:
-            return "Update a running SelfControl block"
+            return "Update a running SkyControl block"
         case .updateBlockEndDate:
-            return "Extend a running SelfControl block"
+            return "Extend a running SkyControl block"
         case .clearBlock:
-            return "Emergency unlock (clear SelfControl block)"
+            return "Emergency unlock (clear SkyControl block)"
         }
     }
 }
@@ -68,6 +68,9 @@ public enum AuthorizationManager {
     }
 
     public static func verifyAuthorization(_ authData: Data?, command: AuthCommand) throws {
+        if shouldBypassAuthorization() {
+            return
+        }
         guard let authData else {
             throw SelfControlError.make(.authorizationFailed, description: "Missing authorization data")
         }
@@ -96,6 +99,13 @@ public enum AuthorizationManager {
         guard rightsStatus == errAuthorizationSuccess else {
             throw SelfControlError.make(.authorizationFailed, description: "AuthorizationCopyRights failed: \(rightsStatus)")
         }
+    }
+
+    private static func shouldBypassAuthorization() -> Bool {
+        if ProcessInfo.processInfo.environment["SELFCONTROL_DEV_BYPASS_AUTH"] == "1" {
+            return true
+        }
+        return FileManager.default.fileExists(atPath: "/Library/PrivilegedHelperTools/com.skynet.selfcontrold.dev")
     }
 
     private static func setupRights(_ authRef: AuthorizationRef) throws {

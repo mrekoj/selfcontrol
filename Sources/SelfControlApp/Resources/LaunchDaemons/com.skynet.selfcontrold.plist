@@ -4,6 +4,10 @@
 <dict>
 	<key>Label</key>
 	<string>com.skynet.selfcontrold</string>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>com.skynet.selfcontrol</string>
+	</array>
 	<key>ProgramArguments</key>
 	<array>
 		<string>Contents/Resources/com.skynet.selfcontrold</string>

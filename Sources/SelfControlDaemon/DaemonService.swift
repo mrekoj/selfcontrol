@@ -138,7 +138,24 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
         do {
             try AuthorizationManager.verifyAuthorization(authorization, command: .clearBlock)
             var current = try settingsStore.load()
+            let manager = BlockManager(isAllowlist: current.activeBlockAsWhitelist,
+                                       allowLocal: current.allowLocalNetworks,
+                                       includeCommonSubdomains: current.evaluateCommonSubdomains,
+                                       includeLinkedDomains: current.includeLinkedDomains)
+
             if !BlockState.isRunning(settings: current) {
+                // If settings say no block, still clear any orphaned PF/hosts rules.
+                if manager.blockIsActive() {
+                    let cleared = manager.clearBlock()
+                    current.blockIsRunning = false
+                    current.blockEndDate = Date.distantPast
+                    current.activeBlocklist = []
+                    try settingsStore.save(current)
+                    EmergencyUnlockLogger.log(reason: reason, cleared: cleared)
+                    reply(nil)
+                    return
+                }
+
                 reply(SelfControlError.make(.blockNotRunning, description: "Block not running"))
                 return
             }
@@ -149,10 +166,6 @@ final class DaemonService: NSObject, NSXPCListenerDelegate, DaemonXPCProtocol {
                 return
             }
 
-            let manager = BlockManager(isAllowlist: current.activeBlockAsWhitelist,
-                                       allowLocal: current.allowLocalNetworks,
-                                       includeCommonSubdomains: current.evaluateCommonSubdomains,
-                                       includeLinkedDomains: current.includeLinkedDomains)
             let cleared = manager.clearBlock()
 
             current.blockIsRunning = false

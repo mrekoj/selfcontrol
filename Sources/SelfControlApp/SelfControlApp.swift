@@ -34,7 +34,7 @@ struct ContentView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("SelfControl")
+            Text("SkyControl")
                 .font(.largeTitle)
             Text("SwiftUI rewrite (macOS 13+, Apple silicon)")
                 .foregroundStyle(.secondary)

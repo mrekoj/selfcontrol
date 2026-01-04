@@ -1,8 +1,8 @@
-# SelfControl
+# SkyControl
 
 ## About
 
-SelfControl is a free and open-source macOS app that helps you block access to distracting sites for a set period of time. This repository is a SwiftUI rewrite targeting modern macOS on Apple silicon.
+SkyControl is a free and open-source macOS app that helps you block access to distracting sites for a set period of time. This repository is a SwiftUI rewrite targeting modern macOS on Apple silicon.
 
 ## Requirements
 
@@ -33,9 +33,9 @@ Phase 5 replaces the old “Killer” app with a guarded emergency unlock flow. 
 CLI example:
 
 ```sh
-./build/SelfControl.app/Contents/MacOS/selfcontrol-cli unlock --reason "accidentally blocked work site"
-./build/SelfControl.app/Contents/MacOS/selfcontrol-cli update --blocklist "example.com,news.com"
-./build/SelfControl.app/Contents/MacOS/selfcontrol-cli extend --minutes 30
+./build/SkyControl.app/Contents/MacOS/selfcontrol-cli unlock --reason "accidentally blocked work site"
+./build/SkyControl.app/Contents/MacOS/selfcontrol-cli update --blocklist "example.com,news.com"
+./build/SkyControl.app/Contents/MacOS/selfcontrol-cli extend --minutes 30
 ```
 
 ## Sparkle 2 (Updater)
@@ -61,6 +61,23 @@ Optional signing:
 SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" scripts/package_app.sh
 ```
 
+## Dev Workaround (No Developer ID)
+
+If you do not have a Developer ID certificate, macOS blocks SMAppService for LaunchDaemons.
+For local testing only, you can bootstrap the daemon manually:
+
+```sh
+scripts/dev_bootstrap_daemon.sh /Applications/SkyControl.app
+```
+
+This dev bootstrap also enables a local authorization bypass for the daemon.
+
+## Future Work / TODO
+
+- Replace the dev bootstrap with proper signed HelperTool flow (requires Developer ID Application cert).
+- Provide a CLI `--force` unlock to explicitly clear orphaned PF/hosts blocks.
+- Update Sparkle `SUFeedURL` + `SUPublicEDKey` for release updates.
+
 ## License
 
-SelfControl is free software under the GPL. See `COPYING` for details.
+SkyControl is free software under the GPL. See `COPYING` for details.

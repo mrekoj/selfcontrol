@@ -22,12 +22,22 @@ final class AppModel: ObservableObject {
     private var authCache: [AuthCommand: Data] = [:]
 
     private let installer = DaemonInstaller()
+    private let autoInstallKey = "SkyControlAutoInstallAttempted"
 
     func refresh() {
         installer.refreshStatus()
         daemonStatus = installer.state
-        fetchDaemonVersion()
-        refreshBlockStatus()
+        if daemonStatus == .enabled || daemonStatus == .requiresApproval {
+            fetchDaemonVersion()
+            refreshBlockStatus()
+        } else {
+            daemonVersion = "unknown"
+            blockStatusText = "unknown"
+            if !UserDefaults.standard.bool(forKey: autoInstallKey) {
+                UserDefaults.standard.set(true, forKey: autoInstallKey)
+                installDaemon()
+            }
+        }
     }
 
     func installDaemon() {
@@ -35,8 +45,14 @@ final class AppModel: ObservableObject {
             try installer.register()
             daemonStatus = installer.state
             errorMessage = nil
+            refresh()
         } catch {
-            errorMessage = error.localizedDescription
+            let nsError = error as NSError
+            if nsError.domain == "SMAppServiceErrorDomain", nsError.code == 1 {
+                errorMessage = "Daemon install blocked: app/daemon is not signed with a Team ID. Rebuild with SIGN_IDENTITY (Developer ID) and reinstall from /Applications."
+            } else {
+                errorMessage = "\(nsError.localizedDescription) (\(nsError.domain):\(nsError.code))"
+            }
         }
     }
 
@@ -79,7 +95,9 @@ final class AppModel: ObservableObject {
 
         guard let authData = authorizationData(for: .startBlock) else { return }
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            self.errorMessage = error.localizedDescription
+            Task { @MainActor in
+                self.errorMessage = error.localizedDescription
+            }
         } as? DaemonXPCProtocol
 
         guard let remote = proxy else {
@@ -88,11 +106,13 @@ final class AppModel: ObservableObject {
         }
 
         remote.startBlock(blocklist: cleaned, isAllowlist: allowlist, endDate: endDate, settings: settings, authorization: authData) { error in
-            if let error {
-                self.errorMessage = error.localizedDescription
-            } else {
-                self.errorMessage = nil
-                self.refreshBlockStatus()
+            Task { @MainActor in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                } else {
+                    self.errorMessage = nil
+                    self.refreshBlockStatus()
+                }
             }
         }
     }
@@ -111,7 +131,9 @@ final class AppModel: ObservableObject {
 
         guard let authData = authorizationData(for: .updateBlocklist) else { return }
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            self.errorMessage = error.localizedDescription
+            Task { @MainActor in
+                self.errorMessage = error.localizedDescription
+            }
         } as? DaemonXPCProtocol
 
         guard let remote = proxy else {
@@ -120,11 +142,13 @@ final class AppModel: ObservableObject {
         }
 
         remote.updateBlocklist(cleaned, authorization: authData) { error in
-            if let error {
-                self.errorMessage = error.localizedDescription
-            } else {
-                self.errorMessage = nil
-                self.refreshBlockStatus()
+            Task { @MainActor in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                } else {
+                    self.errorMessage = nil
+                    self.refreshBlockStatus()
+                }
             }
         }
     }
@@ -137,7 +161,9 @@ final class AppModel: ObservableObject {
         guard let authData = authorizationData(for: .updateBlockEndDate) else { return }
 
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            self.errorMessage = error.localizedDescription
+            Task { @MainActor in
+                self.errorMessage = error.localizedDescription
+            }
         } as? DaemonXPCProtocol
 
         guard let remote = proxy else {
@@ -152,11 +178,13 @@ final class AppModel: ObservableObject {
         let baseDate = max(currentSettings.blockEndDate, Date())
         let newEndDate = baseDate.addingTimeInterval(TimeInterval(extendMinutes * 60))
         remote.updateBlockEndDate(newEndDate, authorization: authData) { error in
-            if let error {
-                self.errorMessage = error.localizedDescription
-            } else {
-                self.errorMessage = nil
-                self.refreshBlockStatus()
+            Task { @MainActor in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                } else {
+                    self.errorMessage = nil
+                    self.refreshBlockStatus()
+                }
             }
         }
     }
@@ -164,7 +192,9 @@ final class AppModel: ObservableObject {
     func clearBlock(reason: String) {
         guard let authData = authorizationData(for: .clearBlock) else { return }
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            self.errorMessage = error.localizedDescription
+            Task { @MainActor in
+                self.errorMessage = error.localizedDescription
+            }
         } as? DaemonXPCProtocol
 
         guard let remote = proxy else {
@@ -173,13 +203,15 @@ final class AppModel: ObservableObject {
         }
 
         remote.clearBlock(reason: reason, authorization: authData) { error in
-            if let error {
-                self.errorMessage = error.localizedDescription
-                self.lastUnlockStatus = "failed"
-            } else {
-                self.errorMessage = nil
-                self.lastUnlockStatus = "cleared"
-                self.refreshBlockStatus()
+            Task { @MainActor in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                    self.lastUnlockStatus = "failed"
+                } else {
+                    self.errorMessage = nil
+                    self.lastUnlockStatus = "cleared"
+                    self.refreshBlockStatus()
+                }
             }
         }
     }
@@ -200,11 +232,15 @@ final class AppModel: ObservableObject {
 
     func fetchDaemonVersion() {
         let proxy = DaemonClient.shared.connect().remoteObjectProxyWithErrorHandler { error in
-            self.errorMessage = error.localizedDescription
+            Task { @MainActor in
+                self.errorMessage = error.localizedDescription
+            }
         } as? DaemonXPCProtocol
 
         proxy?.getVersion { version in
-            self.daemonVersion = version
+            Task { @MainActor in
+                self.daemonVersion = version
+            }
         }
     }
 
